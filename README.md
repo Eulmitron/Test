@@ -1,8 +1,5 @@
 # Sierra Trout Quest
 
-Sierra Trout Quest is a lightweight fishing adventure originally built with Python and Pygame.
-This repository also contains a small Java port with similar features.
-Select a fishing spot from the world map and battle trout in a simple fight minigame.
 Equip different rods and flies to influence which species you might hook.
 
 ## Requirements
