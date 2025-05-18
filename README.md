@@ -27,7 +27,9 @@ java SierraTroutQuest
 - **Arrow Keys**: Move the player and navigate menus
 - **Space**: Cast your line and reel during a fight
 - **Enter**: Confirm selections
+- **B**: Gather wood
+- **C**: Craft upgrade or campfire
 - **Close Window**: Quit the game
 
-The current demo features three fishing spots with different weather and fish populations.
-Rods and flies modify your chances, and a short minigame plays whenever a fish is hooked.
+The demo now features five fishing spots with different weather, hazards and day/night cycles.
+Stamina and warmth decrease over time, so gather wood (`B`) and craft (`C`) campfires or upgrade rods.
