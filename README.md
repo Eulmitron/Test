@@ -1,6 +1,9 @@
 # Sierra Trout Quest
 
-Sierra Trout Quest is a simple survival fishing game with SNES-style graphics built using Python and Pygame. Move through the mountains, fish in the lakes, and try to catch rare trout before your energy runs out.
+Sierra Trout Quest is a lightweight fishing adventure originally built with Python and Pygame.
+This repository also contains a small Java port with similar features.
+Select a fishing spot from the world map and battle trout in a simple fight minigame.
+Equip different rods and flies to influence which species you might hook.
 
 ## Requirements
 - Python 3.8+
@@ -16,10 +19,18 @@ Sierra Trout Quest is a simple survival fishing game with SNES-style graphics bu
    python sierra_trout_quest.py
    ```
 
+### Java Version
+Compile and run the Java port (requires a graphical environment):
+```bash
+javac SierraTroutQuest.java
+java SierraTroutQuest
+```
+
 ## Controls
-- **Arrow Keys**: Move your character around the screen
-- **Space**: Cast your line and attempt to catch a trout when standing near water
-- **E**: Eat a fish from your inventory to regain energy
+- **Arrow Keys**: Move the player and navigate menus
+- **Space**: Cast your line and reel during a fight
+- **Enter**: Confirm selections
 - **Close Window**: Quit the game
 
-Catch a Golden Trout to unlock harsher conditions. If your energy reaches zero, the adventure ends.
+The current demo features three fishing spots with different weather and fish populations.
+Rods and flies modify your chances, and a short minigame plays whenever a fish is hooked.
