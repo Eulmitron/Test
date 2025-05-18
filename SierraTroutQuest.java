@@ -65,6 +65,7 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
     int timeOfDay = 720; // minutes, start at noon
     boolean campfire = false;
 
+
     // Simple pixel art sprites (placeholder SNES style)
     BufferedImage playerSprite;
     BufferedImage waterTile;
@@ -73,6 +74,8 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
     BufferedImage fishSprite;
 
     char[][] map = new char[WIN_HEIGHT / TILE_SIZE][WIN_WIDTH / TILE_SIZE];
+
+
 
     String fightFish = null;
     int fightProgress = 0;
@@ -251,6 +254,7 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
         g.setColor(new Color(sky, sky, 235));
         g.fillRect(0,0,WIN_WIDTH,WIN_HEIGHT);
 
+
         for (int y = 0; y < map.length; y++) {
             for (int x = 0; x < map[0].length; x++) {
                 BufferedImage img = map[y][x] == 'W' ? waterTile : groundTile;
@@ -266,6 +270,15 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
 
         if (campfire) {
             g.drawImage(campfireSprite, WIN_WIDTH - 48, WIN_HEIGHT - 48, TILE_SIZE, TILE_SIZE, null);
+=======
+        g.setColor(new Color(0,105,148));
+        g.fillRect(0, WIN_HEIGHT/2, WIN_WIDTH, WIN_HEIGHT/2);
+        g.setColor(Color.RED);
+        g.fillRect(playerPos.x, playerPos.y, TILE_SIZE, TILE_SIZE);
+        if (campfire) {
+            g.setColor(Color.ORANGE);
+            g.fillOval(WIN_WIDTH - 50, WIN_HEIGHT - 50, 30, 30);
+ main
         }
         g.setColor(Color.BLACK);
         int y = 10;

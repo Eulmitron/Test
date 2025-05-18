@@ -35,5 +35,4 @@ java SierraTroutQuest
 
 The demo now features five fishing spots with different weather, hazards and day/night cycles.
 Stamina and warmth decrease over time, so gather wood (`B`) and craft (`C`) campfires or upgrade rods.
-Press `F5` to save and `F9` to load your progress. The Java version now draws simple
-SNES-style pixel art sprites for the player, rod, and environment tiles.
+
