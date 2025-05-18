@@ -19,4 +19,10 @@ java SierraTroutQuest
 - **F9**: Load game
 - **Close Window**: Quit the game
 
+
 Five fishing spots feature different weather, hazards and a day/night cycle. Gather wood (`B`) and craft (`C`) to stay warm or upgrade your rod. Press `F5` to save and `F9` to load your progress.
+
+The demo now features five fishing spots with different weather, hazards and day/night cycles.
+Stamina and warmth decrease over time, so gather wood (`B`) and craft (`C`) campfires or upgrade rods.
+
+
