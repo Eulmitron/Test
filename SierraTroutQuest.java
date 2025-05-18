@@ -14,6 +14,9 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
     static final int FISHING = 2;
     static final int FIGHT = 3;
 
+
+    static final Level[] LEVELS = new Level[] {
+
     static class Level {
         String name;
         String weather;
@@ -36,6 +39,7 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
     }
 
     Level[] LEVELS = new Level[] {
+
         new Level("River Bend", "Sun", "None",
                 fishMap("Rainbow Trout", 0.5, "Brown Trout", 0.3, "Brook Trout", 0.2)),
         new Level("Mountain Stream", "Snow", "Cold",
@@ -48,16 +52,23 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
                 fishMap("Golden Trout", 0.5, "Cutthroat Trout", 0.3, "Rainbow Trout", 0.2))
     };
 
-    Map<String, Double> RODS = new HashMap<>();
-    Map<String, Map<String, Double>> FLIES = new HashMap<>();
+    final Map<String, Double> rods = new HashMap<>();
+    final Map<String, Map<String, Double>> flies = new HashMap<>();
 
     int state = START;
     int selectedLevel = 0;
-    Level currentLevel = null;
-    Point playerPos = new Point(WIN_WIDTH/2, WIN_HEIGHT/2);
+    Level currentLevel;
+
+    Player player = new Player(WIN_WIDTH/2, WIN_HEIGHT/2);
+    FightMinigame fight = new FightMinigame();
+    Sprites sprites = new Sprites();
+
     Map<String, Integer> fishInventory = new HashMap<>();
     String rod = "Basic Rod";
     String fly = "Dry Fly";
+
+    int timeOfDay = 720; // minutes
+
 
     int stamina = 100;
     int warmth = 100;
@@ -81,23 +92,29 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
     int fightProgress = 0;
     int fightStrength = 0;
 
+
     boolean left, right, up, down;
 
     javax.swing.Timer timer;
+
+    char[][] map = new char[WIN_HEIGHT / TILE_SIZE][WIN_WIDTH / TILE_SIZE];
 
     public SierraTroutQuest() {
         setPreferredSize(new Dimension(WIN_WIDTH, WIN_HEIGHT));
         setFocusable(true);
         addKeyListener(this);
 
-        RODS.put("Basic Rod", 1.0);
-        RODS.put("Pro Rod", 1.2);
+        rods.put("Basic Rod", 1.0);
+        rods.put("Pro Rod", 1.2);
         Map<String, Double> dry = new HashMap<>();
         dry.put("Rainbow Trout", 0.1);
-        FLIES.put("Dry Fly", dry);
+        flies.put("Dry Fly", dry);
         Map<String, Double> nymph = new HashMap<>();
         nymph.put("Brown Trout", 0.1);
-        FLIES.put("Nymph", nymph);
+        flies.put("Nymph", nymph);
+
+        sprites.create(TILE_SIZE);
+        initMap();
 
         createSprites();
         initMap();
@@ -106,7 +123,10 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
         timer.start();
     }
 
+<
+
     // Initialize a basic water/ground map
+
     private void initMap() {
         for (int y = 0; y < map.length; y++) {
             for (int x = 0; x < map[0].length; x++) {
@@ -114,6 +134,14 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
             }
         }
     }
+
+
+    private static Map<String, Double> fishMap(Object... args) {
+        Map<String, Double> m = new LinkedHashMap<>();
+        for (int i = 0; i < args.length; i += 2) {
+            m.put((String) args[i], (Double) args[i + 1]);
+        }
+        return m;
 
     // Create pixel art sprites
     private void createSprites() {
@@ -153,12 +181,28 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
         g2.fillRect(0, 0, 16, 16);
         g2.dispose();
         return img;
+
     }
 
     @Override
     public void actionPerformed(ActionEvent e) {
         timeOfDay = (timeOfDay + 1) % 1440;
         if (state == FISHING) {
+
+            int dx = (left? -3:0) + (right?3:0);
+            int dy = (up? -3:0) + (down?3:0);
+            player.move(dx, dy, WIN_WIDTH, WIN_HEIGHT, TILE_SIZE);
+            if ((timeOfDay % 60)==0) {
+                player.decay(currentLevel.hazard, true);
+            } else {
+                player.decay(currentLevel.hazard, false);
+            }
+        } else if (state == FIGHT) {
+            fight.tick();
+            if (fight.won()) {
+                fishInventory.merge(fight.fish, 1, Integer::sum);
+                player.stamina = Math.max(0, player.stamina - 2);
+
             if (left) playerPos.x -= 3;
             if (right) playerPos.x += 3;
             if (up) playerPos.y -= 3;
@@ -178,8 +222,9 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
             if (fightProgress >= 100) {
                 fishInventory.merge(fightFish, 1, Integer::sum);
                 stamina = Math.max(0, stamina - 2);
+
                 state = FISHING;
-            } else if (fightProgress <= 0) {
+            } else if (fight.lost()) {
                 state = FISHING;
             }
         }
@@ -190,41 +235,44 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
     }
 
     private void attemptFish() {
+
+        if (player.stamina <= 0 || player.warmth <= 0) return;
+
         if (stamina <= 0 || warmth <= 0) return;
+
         Map<String, Double> probs = new LinkedHashMap<>(currentLevel.fish);
-        for (Map.Entry<String, Double> entry : FLIES.getOrDefault(fly, Collections.emptyMap()).entrySet()) {
-            probs.merge(entry.getKey(), entry.getValue(), Double::sum);
+        for (Map.Entry<String, Double> e : flies.getOrDefault(fly, Collections.emptyMap()).entrySet()) {
+            probs.merge(e.getKey(), e.getValue(), Double::sum);
         }
-        double rodMod = RODS.getOrDefault(rod, 1.0);
-        double total = 0;
-        for (double v : probs.values()) total += v;
+        double rodMod = rods.getOrDefault(rod, 1.0);
+        double total = 0; for (double v:probs.values()) total += v;
         double r = Math.random() * total * rodMod;
-        double cum = 0;
-        for (Map.Entry<String, Double> entry : probs.entrySet()) {
-            cum += entry.getValue();
-            if (r <= cum) {
-                fightFish = entry.getKey();
-                break;
-            }
+        double cum = 0; String chosen = null;
+        for (Map.Entry<String, Double> e : probs.entrySet()) {
+            cum += e.getValue();
+            if (r <= cum) { chosen = e.getKey(); break; }
         }
+        if (chosen!=null) {
+            fight.start(chosen);
+            player.stamina = Math.max(0, player.stamina - 5);
+            state = FIGHT;
+        }
+
+
         stamina = Math.max(0, stamina - 5);
         fightProgress = 50;
         fightStrength = 1 + (int)(Math.random()*3);
         state = FIGHT;
+
     }
 
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-        if (state == START) {
-            drawStart(g);
-        } else if (state == MAP) {
-            drawMap(g);
-        } else if (state == FISHING) {
-            drawFishing(g);
-        } else if (state == FIGHT) {
-            drawFight(g);
-        }
+        if (state == START) drawStart(g);
+        else if (state == MAP) drawMap(g);
+        else if (state == FISHING) drawFishing(g);
+        else if (state == FIGHT) drawFight(g);
     }
 
     private void drawStart(Graphics g) {
@@ -238,9 +286,13 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
     private void drawMap(Graphics g) {
         g.setColor(new Color(0,100,0));
         g.fillRect(0,0,WIN_WIDTH,WIN_HEIGHT);
-        int y = 150;
+        int y=150;
         for (int i=0;i<LEVELS.length;i++) {
+
+            g.setColor(i==selectedLevel?Color.YELLOW:Color.WHITE);
+
             if (i==selectedLevel) g.setColor(Color.YELLOW); else g.setColor(Color.WHITE);
+
             String text = LEVELS[i].name + " - " + LEVELS[i].weather + " (" + LEVELS[i].hazard + ")";
             drawCentered(g, text, y);
             y += 40;
@@ -253,6 +305,25 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
         int sky = (int)(100 + 155 * Math.cos(Math.PI * timeOfDay / 720.0));
         g.setColor(new Color(sky, sky, 235));
         g.fillRect(0,0,WIN_WIDTH,WIN_HEIGHT);
+
+        for (int y=0;y<WIN_HEIGHT/TILE_SIZE;y++) {
+            for (int x=0;x<WIN_WIDTH/TILE_SIZE;x++) {
+                BufferedImage tile = (y>=WIN_HEIGHT/(2*TILE_SIZE))?sprites.water:sprites.ground;
+                g.drawImage(tile, x*TILE_SIZE, y*TILE_SIZE, null);
+            }
+        }
+        g.drawImage(sprites.player, player.pos.x, player.pos.y, null);
+        if (player.campfire) {
+            g.drawImage(sprites.campfire, WIN_WIDTH - TILE_SIZE*2, WIN_HEIGHT - TILE_SIZE*2, null);
+        }
+        g.setColor(Color.BLACK);
+        int y = 10;
+        g.drawString("Rod: " + rod + "  Fly: " + fly, 10, y); y+=20;
+        g.drawString("Stamina: " + player.stamina + "  Warmth: " + player.warmth + "  Wood: " + player.wood, 10, y); y+=20;
+        g.drawString("Time: " + (timeOfDay/60) + ":" + String.format("%02d", timeOfDay%60) + " Weather: " + currentLevel.weather, 10, y); y+=20;
+        for (Map.Entry<String,Integer> e : fishInventory.entrySet()) {
+            g.drawString(e.getKey()+": "+e.getValue(), 10, y); y+=20;
+
 
 
         for (int y = 0; y < map.length; y++) {
@@ -270,7 +341,7 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
 
         if (campfire) {
             g.drawImage(campfireSprite, WIN_WIDTH - 48, WIN_HEIGHT - 48, TILE_SIZE, TILE_SIZE, null);
-=======
+
         g.setColor(new Color(0,105,148));
         g.fillRect(0, WIN_HEIGHT/2, WIN_WIDTH, WIN_HEIGHT/2);
         g.setColor(Color.RED);
@@ -278,7 +349,7 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
         if (campfire) {
             g.setColor(Color.ORANGE);
             g.fillOval(WIN_WIDTH - 50, WIN_HEIGHT - 50, 30, 30);
- main
+
         }
         g.setColor(Color.BLACK);
         int y = 10;
@@ -292,6 +363,7 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
         for (Map.Entry<String, Integer> entry : fishInventory.entrySet()) {
             g.drawString(entry.getKey()+": "+entry.getValue(), 10, y);
             y += 20;
+
         }
     }
 
@@ -299,19 +371,24 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
         g.setColor(new Color(50,50,50));
         g.fillRect(0,0,WIN_WIDTH,WIN_HEIGHT);
         g.setColor(Color.WHITE);
+
+        drawCentered(g, "Fighting " + fight.fish + "!", 100);
+
         drawCentered(g, "Fighting "+fightFish+"!", 80);
         g.drawImage(fishSprite, WIN_WIDTH/2 - 16, 100, 32, 32, null);
+
         g.drawRect(100,200,440,20);
         g.setColor(Color.GREEN);
-        int fill = (int)(440 * fightProgress / 100.0);
+        int fill = (int)(440 * fight.progress / 100.0);
         g.fillRect(100,200,fill,20);
+        g.drawImage(sprites.fish, WIN_WIDTH/2 - TILE_SIZE/2, 140, null);
         g.setColor(Color.WHITE);
         drawCentered(g, "Press SPACE repeatedly to reel in!", 240);
     }
 
     private void drawCentered(Graphics g, String text, int y) {
         FontMetrics fm = g.getFontMetrics();
-        int x = (WIN_WIDTH - fm.stringWidth(text)) / 2;
+        int x = (WIN_WIDTH - fm.stringWidth(text))/2;
         g.drawString(text, x, y);
     }
 
@@ -321,15 +398,21 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
         if (state == START && key == KeyEvent.VK_ENTER) {
             state = MAP;
         } else if (state == MAP) {
-            if (key == KeyEvent.VK_LEFT) {
-                selectedLevel = (selectedLevel - 1 + LEVELS.length) % LEVELS.length;
-            } else if (key == KeyEvent.VK_RIGHT) {
-                selectedLevel = (selectedLevel + 1) % LEVELS.length;
-            } else if (key == KeyEvent.VK_ENTER) {
-                currentLevel = LEVELS[selectedLevel];
-                state = FISHING;
-            }
+            if (key==KeyEvent.VK_LEFT) selectedLevel = (selectedLevel-1+LEVELS.length)%LEVELS.length;
+            else if (key==KeyEvent.VK_RIGHT) selectedLevel = (selectedLevel+1)%LEVELS.length;
+            else if (key==KeyEvent.VK_ENTER) { currentLevel = LEVELS[selectedLevel]; state = FISHING; }
         } else if (state == FISHING) {
+
+            if (key==KeyEvent.VK_LEFT) left=true;
+            if (key==KeyEvent.VK_RIGHT) right=true;
+            if (key==KeyEvent.VK_UP) up=true;
+            if (key==KeyEvent.VK_DOWN) down=true;
+            if (key==KeyEvent.VK_SPACE && player.pos.y >= WIN_HEIGHT/2 - TILE_SIZE) attemptFish();
+            if (key==KeyEvent.VK_B) player.wood++;
+            if (key==KeyEvent.VK_C) craft();
+            if (key==KeyEvent.VK_F5) saveGame();
+            if (key==KeyEvent.VK_F9) loadGame();
+
             if (key == KeyEvent.VK_LEFT) left = true;
             if (key == KeyEvent.VK_RIGHT) right = true;
             if (key == KeyEvent.VK_UP) up = true;
@@ -349,32 +432,38 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
             if (key == KeyEvent.VK_F9) {
                 loadGame();
             }
+
         } else if (state == FIGHT) {
-            if (key == KeyEvent.VK_SPACE) {
-                fightProgress += 5;
-            }
+            if (key==KeyEvent.VK_SPACE) fight.reel();
         }
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
         int key = e.getKeyCode();
-        if (key == KeyEvent.VK_LEFT) left = false;
-        if (key == KeyEvent.VK_RIGHT) right = false;
-        if (key == KeyEvent.VK_UP) up = false;
-        if (key == KeyEvent.VK_DOWN) down = false;
+        if (key==KeyEvent.VK_LEFT) left=false;
+        if (key==KeyEvent.VK_RIGHT) right=false;
+        if (key==KeyEvent.VK_UP) up=false;
+        if (key==KeyEvent.VK_DOWN) down=false;
     }
 
     @Override
     public void keyTyped(KeyEvent e) {}
 
     private void craft() {
+
+        if (player.wood >= 5 && !"Pro Rod".equals(rod)) {
+            player.wood -= 5; rod = "Pro Rod";
+        } else if (player.wood >= 3 && !player.campfire) {
+            player.wood -= 3; player.campfire = true;
+
         if (wood >= 5 && !"Pro Rod".equals(rod)) {
             wood -= 5;
             rod = "Pro Rod";
         } else if (wood >= 3 && !campfire) {
             wood -= 3;
             campfire = true;
+
         }
     }
 
@@ -382,6 +471,18 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
         try {
             Properties p = new Properties();
             p.setProperty("rod", rod);
+
+            p.setProperty("wood", Integer.toString(player.wood));
+            p.setProperty("stamina", Integer.toString(player.stamina));
+            p.setProperty("warmth", Integer.toString(player.warmth));
+            p.setProperty("level", Integer.toString(selectedLevel));
+            p.setProperty("time", Integer.toString(timeOfDay));
+            for (Map.Entry<String,Integer> e : fishInventory.entrySet()) {
+                p.setProperty("fish."+e.getKey(), e.getValue().toString());
+            }
+            p.store(new java.io.FileOutputStream("savegame.properties"), "game");
+        } catch (Exception ex) { ex.printStackTrace(); }
+
             p.setProperty("wood", Integer.toString(wood));
             p.setProperty("stamina", Integer.toString(stamina));
             p.setProperty("warmth", Integer.toString(warmth));
@@ -394,6 +495,7 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+
     }
 
     private void loadGame() {
@@ -401,9 +503,15 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
             Properties p = new Properties();
             p.load(new java.io.FileInputStream("savegame.properties"));
             rod = p.getProperty("rod", rod);
+
+            player.wood = Integer.parseInt(p.getProperty("wood", "0"));
+            player.stamina = Integer.parseInt(p.getProperty("stamina", "100"));
+            player.warmth = Integer.parseInt(p.getProperty("warmth", "100"));
+
             wood = Integer.parseInt(p.getProperty("wood", "0"));
             stamina = Integer.parseInt(p.getProperty("stamina", "100"));
             warmth = Integer.parseInt(p.getProperty("warmth", "100"));
+
             selectedLevel = Integer.parseInt(p.getProperty("level", "0"));
             timeOfDay = Integer.parseInt(p.getProperty("time", "720"));
             fishInventory.clear();
@@ -412,9 +520,13 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
                     fishInventory.put(name.substring(5), Integer.parseInt(p.getProperty(name)));
                 }
             }
+
+        } catch (Exception ex) { ex.printStackTrace(); }
+
         } catch (Exception ex) {
             ex.printStackTrace();
         }
+
     }
 
     public static void main(String[] args) {
