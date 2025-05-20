@@ -185,7 +185,6 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
         }
         if (campfire)
             warmth = Math.min(100, warmth + 1);
-        }
         repaint();
     }
 
@@ -279,7 +278,6 @@ public class SierraTroutQuest extends JPanel implements ActionListener, KeyListe
         if (campfire) {
             g.setColor(Color.ORANGE);
             g.fillOval(WIN_WIDTH - 50, WIN_HEIGHT - 50, 30, 30);
- main
         }
         g.setColor(Color.BLACK);
         int y = 10;
